@@ -55,61 +55,70 @@
 % For specific grading rubrics, please see the project instruction.
 
 \section{Introduction}
-My goal is to reproduce the findings from the paper titled "Assertion Detection in Clinical Natural Language Processing: A Knowledge-Poor Machine Learning Approach". The paper focuses on labeling assertions in clinical notes, etc. as a form of pre-processing to remove extraneous information that might otherwise fool another machine learning algorithm that is processing those notes. The concept is that some clinical notes will mention diseases or symptoms that are NOT applicable to the current patient for some or other reason. The purpose of the model is to identify and remove these labels.
+My goal is to reproduce the findings from the paper titled "Assertion Detection in Clinical Natural Language Processing: A Knowledge-Poor Machine Learning Approach". The paper focuses on labeling assertions in clinical notes as a form of pre-processing. The purpose of the model is to correctly identify when a disease or symptom is asserted to NOT belong to the patient. A good example would be, "The patient does not show signs of heart failure". Without a semantic understanding of that assertion, a "dumb" model might just see "heart failure" and attribute it to the patient. This network intends to properly label that assertion so it can be ignored.
 
-The interesting thing about this approach is that it works without being fed knowledge about what these assertions are. At the time of its writing, the most successful networks all had to be fed information about assertions.
+The interesting thing about their approach in particular is that it works without being fed knowledge about assertions. At the time of its writing, the most successful networks all had to be fed information about assertions.
 
 \section{Scope of reproducibility}
 
-The paper had two primary explorations. The primary claim was to create an Attention-based BiLSTM network that was not fed prior knowledge about assertions to attempt to achieve cutting edge accuracy (roughly 90-93 \%). Their claim was that a "knowledge poor" system could achieve comparable performance to a knowledge rich network in the assertion detection problem. 
+The paper had two explorations. The primary claim was that an Attention-based BiLSTM network that was not fed prior knowledge about assertions could achieve cutting edge accuracy (roughly 90-93 \%).
 
-The second claim was an experiment with word embedding algorithms in the embedding layer for the Att-BiLSTM model. Their findings in the second exploration did not meaningfully contribute to the primary claim. As such, I will take their findings as-is and use them in reproducing the primary claim.
+The second claim was that leveraging meaningful medical word embeddings could improve the accuracy of the model. Their findings in the second exploration did not meaningfully contribute to the primary claim. As such, I will take their findings (PubMed+ Word2vec is the best embedding model) as-is and use their victorious embedding model in reproducing the primary claim.
 
 \subsection{Addressed claims from the original paper}
 
-Clearly itemize the claims you are testing:
 \begin{itemize}
-    \item A knowledge poor Att-BiLSTM network can achieve comparable accuracy to a Knowledge Rich network
+    \item A knowledge poor Att-BiLSTM network can achieve comparable accuracy to a knowledge rich network
     \item The PubMed+ word embedding would outperform a MIMIC III based word2vec word embedding when used in the Att-BiLSTM embedding layer
 \end{itemize}
 
 
 \section{Methodology}
 
-There was no reference code for reproducing this network, so I am taking the description of the model architecture as outlined in the paper in an attempt to reproduce their findings. I have a single Mac-book Pro M1 with 16gb of RAM available to reproduce these findings. Considering that the dataset is incredibly small (on the order of 500 clinical notes with ~ 10k or less sentences) I do not believe that resource constraints will affect my ability to reproduce the results.
+There was no reference code for reproducing this network. I used the description of the model architecture that was outlined in the paper to reproduce their findings. I had a Mac-book Pro M1 with 16gb of RAM available to reproduce their findings. The dataset was incredibly small with roughly 500 clinical notes and less than 10k sentences. When I began, I did not believe that resource constraints would affect my ability to reproduce the results.
 
-They do not mention any of their hyper-parameter values beyond the word embedding size so I had to do a bit of experimentation to come up with my final result.
+They did not mention any of their hyper-parameter values beyond the word embedding size (200) so I had to experiment with each network parameter to come up with a solution.
 
 \subsection{Model descriptions}
 The paper describes the Att-BiLSTM model as follows:
 
-Input Layer: Represents a single sentence that uses context markers to separate the target from the rest of the sentence.
+\textbf{Input Layer}: Represents a single sentence that uses context markers to separate the target from the rest of the sentence.
 
-Embedding Layer: Each input word is translated into a one-hot word embedding vector of size = 200, so the input is a sequence of size 200 vectors. Intention is to convert the words first into a one-hot vector of available vocab. Then to a word embedding of real numbers (size 200) to allow for word association and better contextual understanding.
+\textbf{Embedding Layer}: Each input word is translated into a one-hot word embedding vector of size = 200. The input is a sequence of size 200 vectors. The model first converts each word into a one-hot vector of total vocab size. It then converts each vector to a word embedding of real numbers (size 200) using PubMed+. The purpose of the word embedding is to represent a single word by its many similar words to allow the model to have better contextual understanding.
 
-BiLSTM Layer: Pass in embeddings to consider forward and backward context of each word, output is element-wise sum of word level features.
+\textbf{BiLSTM Layer}: The embeddings are passed in for each word. Bidirectional LSTM is used to get forward and backward context within a sentence. The output is the element-wise sum of word level features.
 
-Attention Layer: Word level features are multiplied by weight vector and aggregated into sentence level feature vectors.
+\textbf{Attention Layer}: Word level features are multiplied by weight vector and aggregated into sentence level feature vectors.
 
-Output: Classification to one of 5 labels on sentence level feature vectors.
+\textbf{Output}: Classification to one of 5 labels on sentence level feature vectors.
+
+Possible Labels
+Absent (Negation) - Does not have disease,
+Hypothetical - Could develop disease eventually,
+Possible - Could have disease but have to rule out,
+Conditional - Presents symptom IF something happens,
+AWSE - Disease applies to someone else (family history, etc.),
 
 \subsection{Data descriptions}
 The paper used data from the 2010 i2b2/VA NLP challenge on relation extraction. It further supplemented the dataset with the NegEx database which is associated with a preexisting model that tried to solve the same problem. This second dataset only had a subset of available assertions (negated or not negated) vs the 5 available labels in the i2b2 dataset. Nevertheless, this dataset helped to supplement the small amount of data available for this NLP challenge.
 
 Today, the i2b2 dataset is contained within the n2c2 dataset and is managed by the Department of Biomedical Informatics (DBMI) at Harvard Medical School. I received access to the data upon a request to their staff.
 
+Each data entry is a full unabridged clinical note coverted to simple text. Each sentence has context markets injected to separate the sentence between the target and the rest of the sentence. An example would be: Show me the <c> target </c>. 
+
 \subsection{Hyperparameters}
 TODO: 
 Describe how you set the hyperparameters and what the source was for their value (e.g. paper, code or your guess). 
 
 \subsection{Implementation}
-The paper did not reference any repositories so I am trying to reproduce this experiment from scratch.
+The paper did not reference any code repositories so the implementation was done entirely from the papers description of the architecture and trial and error with the hyper-parameters. 
 
 \subsection{Computational requirements}
 
 I believe that I will need minimal time to train this network. I would think a quad core processor and a few compute hours at the maximum would do the trick. The challenging part of this experiment is determining the hyperparameters.
 
-TODO: Actual consumption
+Actual results..
+I needed minimal time to train this network on a standard macbook pro with a quad core processor and 16gb of memory. I believe that this experiment could have been reproduced with half of the memory and cores.
 
 \section{Results}
 TODO: 
@@ -167,4 +176,3 @@ Document the extent of (or lack of) communication with the original authors. To 
 
 
 \end{document}
-
