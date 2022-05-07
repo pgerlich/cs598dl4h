@@ -7,6 +7,8 @@ name = "pypi"
 numpy = "*"
 pandas = "*"
 torch = "*"
+gensim = "*"
+sklearn = "*"
 
 [dev-packages]
 
