@@ -68,22 +68,28 @@ class AttBiLSTM(nn.Module):
         self.embedding_do = nn.Dropout(0.3)
 
         ### BiLSTM
-        self.lstm = nn.LSTM(input_size=input_size, num_layers=1, batch_first=True, hidden_size=100, bidirectional=True)
-        self.lstm_do = nn.Dropout(0.3)
+        self.lstm = nn.LSTM(input_size=200, num_layers=1, batch_first=True, hidden_size=32, bidirectional=True, dropout=0.3)
 
         ### Attention mechanism: define attn to be a KnowledgeAttn
-        self.attn = Attention(input_size * 2)
+        self.attn = Attention(64)
 
         ### Dropout + FC
-        self.fc = nn.Linear(input_size * 2, output_size)
+        self.fc = nn.Linear(32 * input_size, output_size)
         self.fc_do = nn.Dropout(p=0.5)
 
-
     def forward(self, x):
-        out = self.lstm(x)
-        out, beta = self.attn(out[0])
-        out = self.do(F.relu(self.fc(out)))
-        return out, beta
+        out = self.embedding_do(x)
+        out = self.lstm(out)
+        print(out[0].shape)
+        out = self.attn(out[0])
+
+        # Why is the output of the attention layer 3040x1 instead of 32x95x1?
+        print(out.shape)
+        out = self.fc(out)
+        out = self.fc_do(out)
+        out = F.relu(out)
+
+        return out
 
 
 class CustomDataset(Dataset):
@@ -190,7 +196,8 @@ def test():
     train_loader, val_loader = load_data(train_dataset, val_dataset, collate_fn)
 
     # Padded size of max words in a single sentence
-    input_size = len(train_dataset_data[0][0])
+    sizes = [len(dataset[0][0]) for dataset in train_loader]
+    input_size = max(sizes)
 
     # Input size --> Padded word vector size. Output size --> 6 (number of assertions)
     model = AttBiLSTM(input_size, 6)

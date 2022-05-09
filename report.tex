@@ -61,15 +61,14 @@ The interesting thing about their approach in particular is that it works withou
 
 \section{Scope of reproducibility}
 
-The paper had two explorations. The primary claim was that an Attention-based BiLSTM network that was not fed prior knowledge about assertions could achieve cutting edge accuracy (roughly 90-93 \%).
+The paper had two explorations. The primary claim was that an Attention-based BiLSTM network that was not fed prior knowledge about assertions could achieve cutting edge accuracy (F1 score of roughly 90-93 \%).
 
-The second claim was that leveraging meaningful medical word embeddings could improve the accuracy of the model. Their findings in the second exploration did not meaningfully contribute to the primary claim. As such, I will take their findings (PubMed+ Word2vec is the best embedding model) as-is and use their victorious embedding model in reproducing the primary claim.
+The second claim was that leveraging medical word embeddings could improve the accuracy of the model. Their findings in the second exploration did not contribute significantly to the primary claim. As such, I will take their findings (PubMed+ Word2vec is the best embedding model) as-is and use their victorious embedding model in reproducing the primary claim.
 
 \subsection{Addressed claims from the original paper}
 
 \begin{itemize}
     \item A knowledge poor Att-BiLSTM network can achieve comparable accuracy to a knowledge rich network
-    \item The PubMed+ word embedding would outperform a MIMIC III based word2vec word embedding when used in the Att-BiLSTM embedding layer
 \end{itemize}
 
 
@@ -100,73 +99,73 @@ Conditional - Presents symptom IF something happens,
 AWSE - Disease applies to someone else (family history, etc.),
 
 \subsection{Data descriptions}
-The paper used data from the 2010 i2b2/VA NLP challenge on relation extraction. It further supplemented the dataset with the NegEx database which is associated with a preexisting model that tried to solve the same problem. This second dataset only had a subset of available assertions (negated or not negated) vs the 5 available labels in the i2b2 dataset. Nevertheless, this dataset helped to supplement the small amount of data available for this NLP challenge.
+The paper used data from the 2010 i2b2/VA NLP challenge on relation extraction. The format of the data was a set of clinical note files split such that each line had a single sentence. Each clinical note file was supplemented with an annotation file with one annotation per line of the following format:
 
-Today, the i2b2 dataset is contained within the n2c2 dataset and is managed by the Department of Biomedical Informatics (DBMI) at Harvard Medical School. I received access to the data upon a request to their staff.
+c="lower abdominal pain" 99:16 99:18||t="problem"||a="present"
 
-Each data entry is a full unabridged clinical note coverted to simple text. Each sentence has context markets injected to separate the sentence between the target and the rest of the sentence. An example would be: Show me the <c> target </c>. 
+Where c="..." denotes the subject or target of the sentence, xx:xx yy:yy denotes the line and sentence number, and a="..." denotes the label for that particular subject in that particular sentence. The t=".." data is not relevant for this challenge. I had to parse these files out, read in the clinical note for this file line by line, and generate the test and training data from these files. The paper goes a step further and actually injects context marks <c> and </c> to surround the subject in the sentence. In the end, I took roughly 500 clinical notes that translated into roughly 6000 training and 2500 test data points.
 
 \subsection{Hyperparameters}
-TODO: 
-Describe how you set the hyperparameters and what the source was for their value (e.g. paper, code or your guess). 
+The original paper references another paper used the Att-BiLSTM architecture introduced by Zhou et al. [1] which I read to determine the drop out hyper parameters. They were 0.3, 0.3, and 0.5 and injected after the embedding, LSTM, and fully connected layers. 
+
+The embedding layer translated each word into an N dimensional vector, which was chosen to be 200 as per the paper.
+
+Finally I chose a batch size of 32, a learning rate of 1e-3, and 20 epochs to train the model. These parameters were all based on successful results with our previous class projects.
 
 \subsection{Implementation}
-The paper did not reference any code repositories so the implementation was done entirely from the papers description of the architecture and trial and error with the hyper-parameters. 
+The paper did not reference any code repositories so the implementation was done from the papers description of the architecture in the original paper, a published word2vec model using pubmed + wikipedia data [2], and a reference paper that outlined the original Att-BiLSTM architecture [1].
+
+My code is located at https://github.com/pgerlich/cs598dl4h/
 
 \subsection{Computational requirements}
 
 I believe that I will need minimal time to train this network. I would think a quad core processor and a few compute hours at the maximum would do the trick. The challenging part of this experiment is determining the hyperparameters.
 
 Actual results..
-I needed minimal time to train this network on a standard macbook pro with a quad core processor and 16gb of memory. I believe that this experiment could have been reproduced with half of the memory and cores.
+The word2vec model was 4gb and needed to be loaded into memory while training the network. As such, I would recommend a minimum of 8gb of memory and a 4 code CPU to reproduce this paper. The average run tim for each epoch was less than 30 seconds but I am not sure I ever got the model configured correctly.
 
 \section{Results}
-TODO: 
-Start with a high-level overview of your results. Does your work support the claims you listed in section 2.1? Keep this section as factual and precise as possible, reserve your judgement and discussion points for the next ``Discussion'' section. 
-
-Go into each individual result you have, say how it relates to one of the claims, and explain what your result is. Logically group related results into sections. Clearly state if you have gone beyond the original paper to run additional experiments and how they relate to the original claims. 
-
-Tips 1: Be specific and use precise language, e.g. ``we reproduced the accuracy to within 1\% of reported value, that upholds the paper's conclusion that it performs much better than baselines.'' Getting exactly the same number is in most cases infeasible, so you'll need to use your judgement call to decide if your results support the original claim of the paper. 
-
-Tips 2: You may want to use tables and figures to demonstrate your results.
-
-% The number of subsections for results should be the same as the number of hypotheses you are trying to verify.
+I went to great lengths just to gather and curate the dataset into the format that the author used. It was not discussed in the paper, but there was a significant amount of preprocessing that had to be done to the data. The context markers had to be injected programatically, and the labels/input data had to be manually extracted from the raw clinical notes given some rules and a custom algorithm that I had to write.
 
 \subsection{Result 1}
 
-\subsection{Result 2}
+F1 score achieved, if I even succeeded
+
 
 \subsection{Additional results not present in the original paper}
-TODO: 
-Describe any additional experiments beyond the original paper. This could include experimenting with additional datasets, exploring different methods, running more ablations, or tuning the hyperparameters. For each additional experiment, clearly describe which experiment you conducted, its result, and discussions (e.g. what is the indication of the result).
+Most of the available hyper parameters were not able to be tuned because of the rigidity of the data and embedding layer. I did mess with the batch size, number of epochs, and the learning rate to try and improve my results. 
+
+With a batch size of 64 I noticed a significant slow down in the time to run each epoch but I actually believe that I ended up overfitting and my f1 score and ROC AUC on the test data decreased.
+
+I also tried to tune the dropout layers from the original .3, .3, .5 to try and combat the over-fitting I thought I was experiencing. I struggled to interpret these results in a meaningful way, as the f1 and roc auc failed to increase with these changes.
 
 \section{Discussion}
-TODO: 
-Describe larger implications of the experimental results, whether the original paper was reproducible, and if it wasn’t, what factors made it irreproducible. 
 
-Give your judgement on if you feel the evidence you got from running the code supports the claims of the paper. Discuss the strengths and weaknesses of your approach -- perhaps you didn't have time to run all the experiments, or perhaps you did additional experiments that further strengthened the claims in the paper.
+PubMed+ was no longer available so I had to use a different trained word2vec model that had the pubmed corpus in it. I found one here https://bio.nlplab.org/ which seemed to be comparable.
+
+I believe the original paper could have been reproduced closer to when it was published. The original Pubmed+ word2vec model that they used to get the best results was also no longer available to use. I didn't understand what they had meant by using a random word embedding, either, so I was unable to effectively replicate the basic implementation of their results.
+
+The biggest issue that I ran into with the paper itself was the way that they handled the context markers not being clearly defined. I had to guess at how to translate the context markers into a word embedding which I think impacted my results. 
+
+Overall I think that I could have come much closer to effectively reproducing their paper if I had a better understanding of word2vec and the translation process from text data into numerical data. My knowledge in this area was relatively limited so I spent significant time struggling to understand and translate these concepts which severely diminished the amount of time I had available to try and tune the network.
 
 \subsection{What was easy}
-TODO: 
-Describe which parts of your reproduction study were easy. E.g. was it easy to run the author's code, or easy to re-implement their method based on the description in the paper. The goal of this section is to summarize to the reader which parts of the original paper they could easily apply to their problem. 
-
-Tips: Be careful not to give sweeping generalizations. Something that is easy for you might be difficult to others. Put what was easy in context and explain why it was easy (e.g. code had extensive API documentation and a lot of examples that matched experiments in papers). 
+I was comfortable with the data processing part of the paper. It was easy to translate the data from the nlp challenge into usable input data. The model architecture was also very well described. They referenced the original paper that explained every aspect of the Att-BiLSTM model. As such, setting up the outline of the project was very easy. The way they described their overall solution was very clear and I was quickly able to outline the model.
 
 \subsection{What was difficult}
-TODO: 
-Describe which parts of your reproduction study were difficult or took much more time than you expected. Perhaps the data was not available and you couldn't verify some experiments, or the author's code was broken and had to be debugged first. Or, perhaps some experiments just take too much time/resources to run and you couldn't verify them. The purpose of this section is to indicate to the reader which parts of the original paper are either difficult to re-use, or require a significant amount of work and resources to verify. 
+They left gaps in their explanation of how they translate the input text into context marked text and ultimately into a word embedding vector. There are multiple interpretations of the path they chose, and I was ultimately not able to successfully perform this step which basically prevented me from running a complete model in the end. My original model that was getting 30 percent accuracy ultimately was just running on garbage data. Despite them very effectively describing their machine learning solution -
+there lack of a concise description of the pre-processing steps ultimately severely impacted the reproduce-ability of the experiment. 
 
-Tips: Be careful to put your discussion in context. For example, don't say ``the math was difficult to follow,'' say ``the math requires advanced knowledge of calculus to follow.'' 
+The other major issue was that they rely heavily on proprietary or otherwise inaccessible word2vec models that were not available to someone that wanted to reproduce the experiment. Fortunately there are similar models out there.
 
 \subsection{Recommendations for reproducibility}
-TODO: 
-Describe a set of recommendations to the original authors or others who work in this area for improving reproducibility.
+I would make the original word embedding models available for folks to use to reproduce the results. I would also describe the pre-processing step with injecting context markers more clear. How did you handle translating these markets into a vector? 
 
 \section{Communication with original authors}
-TODO: 
+I made no attempt to contact the original authors as I was unable to find their context information.
 
-Document the extent of (or lack of) communication with the original authors. To make sure the reproducibility report is a fair assessment of the original research we recommend getting in touch with the original authors. You can ask authors specific questions, or if you don't have any questions you can send them the full report to get their feedback.
-
+[1] - P. Zhou, W. Shi, J. Tian, Z. Qi, B. Li, H. Hao and B. Xu, “Attention- based bidirectional long short-term memory networks for relation classification,” In Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics, vol. 2, 2016, pp. 207–212.
+[2] - Distributional Semantics Resources for Biomedical Text Processing. Sampo Pyysalo, Filip Ginter, Hans Moen, Tapio Salakoski and Sophia Ananiadou. LBM 2013.
 
 \bibliographystyle{acl_natbib}
 \bibliography{acl2021}
